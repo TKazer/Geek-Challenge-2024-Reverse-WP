@@ -20,7 +20,7 @@
   * [(1) ez_hook](#ez_hook)
   * [(2) AES!](#AES)
   * [(3) 致我的星星 (非预期解)](#致我的星星)
-  * [(4) 你干嘛~~ (非预期解)](#你干嘛~~)
+  * [(4) 你干嘛~~ (非预期解)](#你干嘛)
   * [(5) LinkedListModular](#LinkedListModular)
   * [(6) blasting_master](#blasting_master)
 
@@ -3038,7 +3038,7 @@ Hardware.Mon.#1..: Temp: 62c Util: 98% Core:2565MHz Mem:8000MHz Bus:8
 
 **SYC{STTAAARRRRAAATTTTS}**
 
-### 你干嘛~~
+### 你干嘛
 
 拖入IDA分析，发现main函数分析错误，熟悉的花指令，不过这题多了try catch
 
