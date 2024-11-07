@@ -2983,6 +2983,8 @@ int main()
 
 ### 致我的星星
 
+(非预期解)
+
 下载打开index.js查看代码
 
 发现要求输入字符构成的字符串的MD5需要等于某个MD5
@@ -3039,6 +3041,8 @@ Hardware.Mon.#1..: Temp: 62c Util: 98% Core:2565MHz Mem:8000MHz Bus:8
 **SYC{STTAAARRRRAAATTTTS}**
 
 ### 你干嘛
+
+(非预期解)
 
 拖入IDA分析，发现main函数分析错误，熟悉的花指令，不过这题多了try catch
 
