@@ -11,16 +11,16 @@
   * [(6) 我勒个z3啊](#我勒个z3啊)
 - [2. Week2](#Week2)
   * [(1) 玩就行了](#玩就行了)
-  * [(2) 好像是python?](#好像是python?)
+  * [(2) 好像是python?](#好像是python)
   * [(3) 奇怪的RC4](#奇怪的RC4)
   * [(4) 长颈鹿喜欢吃彩虹](#长颈鹿喜欢吃彩虹)
   * [(5) DH爱喝茶](#DH爱喝茶)
   * [(6) CPP_flower](#CPP_flower)
 - [3. Week3](#Week3)
   * [(1) ez_hook](#ez_hook)
-  * [(2) AES!](#AES!)
-  * [(3) 致我的星星 (非预期解)](#致我的星星 (非预期解))
-  * [(4) 你干嘛~~ (非预期解)](#你干嘛~~ (非预期解))
+  * [(2) AES!](#AES)
+  * [(3) 致我的星星 (非预期解)](#致我的星星)
+  * [(4) 你干嘛~~ (非预期解)](#你干嘛~~)
   * [(5) LinkedListModular](#LinkedListModular)
   * [(6) blasting_master](#blasting_master)
 
@@ -1056,7 +1056,7 @@ std::cout << e_Flag << std::endl;
 
 ```
 
-### 好像是python?
+### 好像是python
 
 下载得到program文件，打开发现是python编译过程中的文件，直接甩给GPT分析出原代码。
 
@@ -2410,7 +2410,7 @@ int main()
 }
 ```
 
-### AES!
+### AES
 
 拖入IDA分析，以下是我重命名过的伪代码
 
@@ -2981,7 +2981,7 @@ int main()
 }
 ```
 
-### 致我的星星 (非预期解)
+### 致我的星星
 
 下载打开index.js查看代码
 
@@ -3038,7 +3038,7 @@ Hardware.Mon.#1..: Temp: 62c Util: 98% Core:2565MHz Mem:8000MHz Bus:8
 
 **SYC{STTAAARRRRAAATTTTS}**
 
-### 你干嘛~~ (非预期解)
+### 你干嘛~~
 
 拖入IDA分析，发现main函数分析错误，熟悉的花指令，不过这题多了try catch
 
