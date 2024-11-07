@@ -1,6 +1,6 @@
 # Geek Challenge 2024 Reverse WP
-
-萌新第一次参加CTF比赛，这边给出Reverse前三周的WP
+队伍名：UF@F菜鸟向后冲 成员：Liv、yyyxxx
+萌新第一次组队参加CTF比赛，这边给出Reverse前三周的WP
 
 - [1. Week1](#Week1)
   * [(1) 先来一道签到题](#先来一道签到题)
