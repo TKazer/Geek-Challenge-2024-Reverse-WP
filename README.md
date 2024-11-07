@@ -2,6 +2,28 @@
 
 萌新第一次参加CTF比赛，这边给出Reverse前三周的WP
 
+- [1. Week1](#Week1)
+  * [(1) 先来一道签到题](#先来一道签到题)
+  * [(2) Hello_re](#Hello_re)
+  * [(3) 让我康康你的调试](#让我康康你的调试)
+  * [(4) ezzzz](#ezzzz)
+  * [(5) 也许你也听jay](#也许你也听jay)
+  * [(6) 我勒个z3啊](#我勒个z3啊)
+- [2. Week2](#Week2)
+  * [(1) 玩就行了](#玩就行了)
+  * [(2) 好像是python?](#好像是python?)
+  * [(3) 奇怪的RC4](#奇怪的RC4)
+  * [(4) 长颈鹿喜欢吃彩虹](#长颈鹿喜欢吃彩虹)
+  * [(5) DH爱喝茶](#DH爱喝茶)
+  * [(6) CPP_flower](#CPP_flower)
+- [3. Week3](#Week3)
+  * [(1) ez_hook](#ez_hook)
+  * [(2) AES!](#AES!)
+  * [(3) 致我的星星 (非预期解)](#致我的星星 (非预期解))
+  * [(4) 你干嘛~~ (非预期解)](#你干嘛~~ (非预期解))
+  * [(5) LinkedListModular](#LinkedListModular)
+  * [(6) blasting_master](#blasting_master)
+
 ## Week1
 
 ### 先来一道签到题
@@ -52,7 +74,7 @@ for(int i = 0; i < 36; i+=2)
 // SYC{H3lI0_@_new_R3vers3_Ctf3r!!}
 ```
 
-### Hello re
+### Hello_re
 
 用Detect It Easy查壳发现加了UPX壳，尝试直接用upx.exe进行脱壳，发现没办法直接脱壳，应该是变异UPX。
 
