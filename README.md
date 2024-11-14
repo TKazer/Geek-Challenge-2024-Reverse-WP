@@ -3,7 +3,7 @@
 
 成员：Liv、yyyxxx
 
-萌新第一次组队参加CTF比赛，这边给出Reverse前三周的WP
+萌新第一次组队参加CTF比赛，这边给出Reverse四周的WP
 
 - [1. Week1](#Week1)
   * [(1) 先来一道签到题](#先来一道签到题)
@@ -26,6 +26,11 @@
   * [(4) 你干嘛~~ (非预期解)](#你干嘛)
   * [(5) LinkedListModular](#LinkedListModular)
   * [(6) blasting_master](#blasting_master)
+- [4. Week4](#Week4)
+  * [(1) ez_re](#ez_re)
+  * [(2) ez_raw](#ez_raw)
+  * [(3) 贝斯！贝斯！](#贝斯_贝斯_)
+  * [(4) baby_vm](#baby_vm)
 
 ## Week1
 
@@ -3855,3 +3860,1297 @@ edca31600f569d6a284ffa5a44a6561d:p3rt
 ```
 
 **SYC{W0w!y0u_@re_th3_BeSt_blasting_Exp3rt!!}**
+
+## Week4
+
+### ez_re
+
+拖入IDA的分析，发现main函数无法直接F5，并且代码段爆红，往下看到经典的一个花指令。
+
+![QQ_1731548663825](https://github.com/TKazer/Geek-Challenge-2024-Reverse-WP/blob/main/Pic/ez_re1.png)
+
+直接把call的第一个E8字节改成90
+
+![QQ_1731548727588](https://github.com/TKazer/Geek-Challenge-2024-Reverse-WP/blob/main/Pic/ez_re2.png)
+
+然后对剩下多出的数据字节按C分析还原成代码即可完成代码还原，然后选中main函数部分代码按P重构成函数即可F5分析。
+
+得到main函数伪代码如下：
+
+```c++
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  size_t v3; // kr00_4
+  NTSTATUS v4; // eax
+  int v5; // eax
+  int v6; // eax
+  int v7; // ecx
+  char v9; // [esp+0h] [ebp-1FCh]
+  char v10; // [esp+0h] [ebp-1FCh]
+  _DWORD v11[12]; // [esp+Ch] [ebp-1F0h]
+  __m128 v12; // [esp+3Ch] [ebp-1C0h]
+  BCRYPT_KEY_HANDLE phKey; // [esp+4Ch] [ebp-1B0h] BYREF
+  BCRYPT_ALG_HANDLE phAlgorithm; // [esp+50h] [ebp-1ACh] BYREF
+  ULONG pcbResult; // [esp+54h] [ebp-1A8h] BYREF
+  UCHAR pbOutput[128]; // [esp+58h] [ebp-1A4h] BYREF
+  UCHAR pbInput[128]; // [esp+D8h] [ebp-124h] BYREF
+  char Arglist[128]; // [esp+158h] [ebp-A4h] BYREF
+  UCHAR pbSecret[16]; // [esp+1D8h] [ebp-24h] BYREF
+  UCHAR pbIV[16]; // [esp+1E8h] [ebp-14h] BYREF
+
+  if ( IsDebuggerPresent() )
+    exit(1);
+  phAlgorithm = 0;
+  phKey = 0;
+  BCryptOpenAlgorithmProvider(&phAlgorithm, L"AES", 0, 0);
+  BCryptSetProperty(phAlgorithm, L"ChainingMode", (PUCHAR)L"ChainingModeCBC", 0x20u, 0);
+  sub_401090(pbSecret);
+  BCryptGenerateSymmetricKey(phAlgorithm, &phKey, 0, 0, pbSecret, 0x10u, 0);
+  *(_DWORD *)pbIV = -1809944383;
+  *(_DWORD *)&pbIV[4] = 20005620;
+  *(_DWORD *)&pbIV[8] = 1426735024;
+  *(_DWORD *)&pbIV[12] = -744882271;
+  v12.m128_u64[0] = 0xFEF76ECE6FA34BA2uLL;
+  v12.m128_u64[1] = 0x67735D6CF76837ECLL;
+  v11[0] = 1967972573;
+  v11[1] = -1206635625;
+  *(__m128 *)pbIV = _mm_xor_ps(v12, *(__m128 *)pbIV);
+  v11[2] = 286897687;
+  v11[3] = 593529441;
+  v11[4] = 451024454;
+  v11[5] = 643548005;
+  v11[6] = 816706920;
+  v11[7] = -968102223;
+  v11[8] = -1147226709;
+  v11[9] = -1035299469;
+  v11[10] = -1446252680;
+  v11[11] = -1595838018;
+  sub_401020("please input your flag:", v9);
+  sub_401050("%s", (char)Arglist);
+  memset(pbInput, 0, sizeof(pbInput));
+  v3 = strlen(Arglist);
+  memcpy(pbInput, Arglist, v3);
+  pcbResult = 0;
+  v4 = BCryptEncrypt(phKey, pbInput, v3, 0, pbIV, 0x10u, pbOutput, 0x80u, &pcbResult, 1u);
+  if ( v4 )
+  {
+    v5 = sub_4014E0(v4, sub_4016F0);
+    v6 = std::ostream::operator<<(v5);
+    std::ostream::operator<<(v6);
+  }
+  else
+  {
+    v7 = 0;
+    while ( pbOutput[v7] == *((_BYTE *)v11 + v7) )
+    {
+      if ( (unsigned int)++v7 >= 0x30 )
+      {
+        sub_401020("you are right\n", v10);
+        goto LABEL_10;
+      }
+    }
+    sub_401020("not equal\n", v10);
+  }
+LABEL_10:
+  BCryptDestroyKey(phKey);
+  BCryptCloseAlgorithmProvider(phAlgorithm, 0);
+  system("pause");
+  return 0;
+}
+```
+
+可以看到是用BCrypt库进行的AES加密代码，密钥是用pbSecret进行初始化，pbSecret是从sub_401090取出，但是发现sub_401090也是插入了花指令。
+
+![QQ_1731549192101](https://github.com/TKazer/Geek-Challenge-2024-Reverse-WP/blob/main/Pic/ez_re3.png)
+
+首先还是将这个E8改成90，然后按C分析剩下字节为代码，最后将一下矩形框起来部分代码全部Nop然后全选函数按P重构为函数即可还原代码。
+
+得到sub_401090伪代码：
+
+```c++
+int __cdecl sub_401090(int a1)
+{
+  int result; // eax
+  _BYTE v2[15]; // [esp+Ch] [ebp-24h]
+  _BYTE v3[17]; // [esp+1Bh] [ebp-15h] BYREF
+  int i; // [esp+2Ch] [ebp-4h]
+
+  v3[4] = -96;
+  v3[5] = 62;
+  v3[6] = 111;
+  v3[7] = 38;
+  v3[8] = -110;
+  v3[9] = -44;
+  v3[10] = 112;
+  v3[11] = -100;
+  v3[12] = -87;
+  v3[13] = 13;
+  v3[14] = 16;
+  v3[15] = 37;
+  v3[16] = -127;
+  v2[0] = -126;
+  v2[1] = -101;
+  v2[2] = -75;
+  v2[3] = -88;
+  v2[4] = 19;
+  v2[5] = -74;
+  v2[6] = 107;
+  v2[7] = 88;
+  v2[8] = 110;
+  v2[9] = -91;
+  v2[10] = 75;
+  v2[11] = -1;
+  v2[12] = 52;
+  v2[13] = -6;
+  v2[14] = -20;
+  qmemcpy(v3, "[/Fn", 4);
+  for ( i = 0; i < 16; ++i )
+  {
+    *(_BYTE *)(i + a1) = v2[i] ^ v3[i + 1];
+    result = i + 1;
+  }
+  return result;
+}
+```
+
+可以看到是用一堆数据进行计算得到的pbSecret，直接将代码复制到c++项目运行即可得到pbSecret字节。
+
+>0xAD, 0xDD, 0xDB, 0x08, 0x2D, 0xD9, 0x4D, 0xCA, 0xBA, 0xD5, 0xD7, 0x56, 0x39, 0xEA, 0xC9, 0xDA
+
+从main函数伪代码可以分析出，IV是已经给出，然后密文Flag是v11的数据，所以直接用BCrypt库配合拿到的pbSecret、IV和密文数据即可解密出Flag。
+
+解密代码：
+
+```c++
+#include <iostream>
+#include <Windows.h>
+#include <bcrypt.h>
+#pragma comment(lib,"Bcrypt.lib")
+
+int main_ezRe()
+{
+    UCHAR pbSecret[16]
+    { 0xAD, 0xDD, 0xDB, 0x08, 0x2D, 0xD9, 0x4D, 0xCA, 0xBA, 0xD5, 0xD7, 0x56, 0x39, 0xEA, 0xC9, 0xDA };
+    UCHAR pbIV[16]
+    { 0x63 , 0x3B , 0xBD , 0xFB , 0x3A , 0x2C , 0xC6 , 0xFF , 0x5C , 0x08 , 0x62 , 0xA2 , 0xCD , 0xA2 , 0xEA , 0xB4};
+
+    DWORD EncodeData[12]{};
+    EncodeData[0] = 1967972573;
+    EncodeData[1] = -1206635625;
+    EncodeData[2] = 286897687;
+    EncodeData[3] = 593529441;
+    EncodeData[4] = 451024454;
+    EncodeData[5] = 643548005;
+    EncodeData[6] = 816706920;
+    EncodeData[7] = -968102223;
+    EncodeData[8] = -1147226709;
+    EncodeData[9] = -1035299469;
+    EncodeData[10] = -1446252680;
+    EncodeData[11] = -1595838018;
+   
+    BCRYPT_KEY_HANDLE phKey;
+    BCRYPT_ALG_HANDLE phAlgorithm;
+    ULONG pcbResult;
+    UCHAR pbOutput[128];
+    UCHAR pbInput[128];
+
+    BCryptOpenAlgorithmProvider(&phAlgorithm, L"AES", NULL, NULL);
+    BCryptSetProperty(phAlgorithm, L"ChainingMode", (PUCHAR)L"ChainingModeCBC", 0x20u, 0);
+    BCryptGenerateSymmetricKey(phAlgorithm, &phKey, 0, 0, pbSecret, 0x10u, 0);
+
+    BCryptDecrypt(phKey, (PUCHAR)(EncodeData), 48, 0, pbIV, 0x10u, pbOutput, 0x80u, &pcbResult, 1u);
+    
+    std::cout << pbOutput << std::endl;
+
+    BCryptDestroyKey(phKey);
+    BCryptCloseAlgorithmProvider(phAlgorithm, 0);
+
+    // SYC{W0w_Y0U_fOUNdDD_TLS_AND_AeS}
+
+	return 0;
+}
+```
+
+### ez_raw
+
+这是一题硬盘取证+逆向综合题，下载拿到.raw文件，直接用volatility3进行分析，扫描硬盘文件。
+
+扫描命令:
+
+>python .\vol.py -f ..\Forensics.raw windows.filescan
+
+扫描得到所有的文件夹和文件，尝试搜索关键字符串，如"flag" "Key" "Secret"等等。
+
+发现直接搜flag就有文件，会搜到一个flag.kdbx，是一个密码管理器的文件格式，并且他的上一个文件是program.elf，应该就是需要逆向的目标程序。
+
+>0xc16a2d80      \Users\win10\program.elf
+>0xc16a2e58      \Users\win10\flag.kdbx
+
+得到两个文件的虚拟地址后，用windows.dumpfiles来dump出文件。
+
+dump命令:
+
+> python .\vol.py -o .\Out -f ..\Forensics.raw windows.dumpfiles --virtaddr 0xc16a2d80
+>
+> python .\vol.py -o .\Out -f ..\Forensics.raw windows.dumpfiles --virtaddr 0xc16a2e58
+
+![QQ_1731550277522](https://github.com/TKazer/Geek-Challenge-2024-Reverse-WP/blob/main/Pic/ez_raw1.png)
+
+得到两个文件，然后改后缀名即可。
+
+直接用KeePass2打开flag.kdbx文件，发现里面是有Notes的。
+
+![QQ_1731550402527](https://github.com/TKazer/Geek-Challenge-2024-Reverse-WP/blob/main/Pic/ez_raw2.png)
+
+然后在History中发现有两次历史版本。
+
+![QQ_1731550432878](https://github.com/TKazer/Geek-Challenge-2024-Reverse-WP/blob/main/Pic/ez_raw3.png)
+
+15:47:04那个版本里面存放的是假Flag，15:46:34版本里面存放着一个18长度密钥，先存起来，目前不知道用处。
+
+![QQ_1731550478610](https://github.com/TKazer/Geek-Challenge-2024-Reverse-WP/blob/main/Pic/ez_raw4.png)
+
+接下来是逆向分析，将program.elf直接拖入IDA分析。
+
+main函数伪代码：
+
+```C++
+int __fastcall main(int argc, const char **argv, const char **envp)
+{
+  const char *v3; // rbx
+  const char *v4; // rbp
+
+  if ( argc <= 1 )
+  {
+    printf("Usage: %s <key>\n", *argv);
+  }
+  else
+  {
+    v3 = argv[1];
+    v4 = argv[2];
+    if ( strlen(v3) == 18 )
+    {
+      sub_11D0(v4, v3);
+      if ( !memcmp(v4, &unk_4040, 0x20uLL) )
+        printf("right");
+    }
+  }
+  return 0;
+}
+```
+
+发现main函数很简单清晰，就是输入一个Key，一个密文，然后用sub_11D0进行加密，与unk_4040的密文进行对比。
+
+发现他加密前有个初步的判断，strlen(v3) == 18，判断密钥是否为18长度，而我们刚刚在.kdbx文件中拿到的一个uoi也是18长度，初步可以猜测那个即为密钥，所以接下来主要分析sub_11D0的加密流程。
+
+sub_11D0:
+
+```c++
+__int64 __fastcall sub_11D0(__m128i *a1, __int64 a2)
+{
+  __m128i v2; // xmm1
+  __int64 result; // rax
+  __m128i v4; // xmm0
+  __m128i v5; // xmm0
+  __m128i v6; // xmm0
+
+  v2 = _mm_loadu_si128(a1);
+  result = 0LL;
+  v4 = _mm_add_epi8(_mm_add_epi8(v2, v2), v2);
+  v5 = _mm_add_epi8(v4, v4);
+  v6 = _mm_add_epi8(v5, v5);
+  *a1 = _mm_sub_epi8(_mm_add_epi8(v6, v6), v2);
+  do
+  {
+    a1->m128i_i8[result] ^= *(_BYTE *)(a2 + (unsigned int)result % 0x12) ^ 0x33;
+    ++result;
+  }
+  while ( result != 32 );
+  return result;
+}
+```
+
+发现加密流程也不复杂，就是将明文转成__m128i结构进行了一系列字节上的计算。
+
+总流程如下：
+
+m128i_Data = load(明文)
+
+r = m128i_Data + m128i_Data + m128i_Data // 3倍
+
+r = r + r	// 6倍
+
+r = r + r	// 12倍
+
+r = (r + r) - m128i_Data // 23倍
+
+所以综上，一系列计算，就是为了将字节在有限域内进行*23。
+
+但是__m128i是16字节大小的结构体，而我们输入的明文在memcmp处可以看到应该是32字节长度，所以只有明文前半部分进行了字节的翻倍计算。
+
+然后循环部分就是将翻倍后的明文字节异或上密钥再异或0x33。
+
+所以最终解密流程如下：
+
+密文 ^= 密钥[ i % 18] ^ 0x33 得到翻倍后的前半密文，而后半密文解密完毕
+
+最后在0-256范围内进行翻23倍计算，遍历到对应的明文字节，解密出前半密文，拼接得到Flag。
+
+解密代码如下：
+
+```c++
+int main()
+{
+    std::vector<unsigned char> EncodeData =
+    {
+      0x24, 0xA5, 0x58, 0x59, 0x0B, 0x45, 0xEC, 0x94, 0x7A, 0xA6,
+      0xCE, 0x11, 0x10, 0x65, 0x8E, 0xA6, 0x6C, 0x31, 0x23, 0x05,
+      0x3E, 0x64, 0x3A, 0x26, 0x6E, 0x26, 0x25, 0x2E, 0x76, 0x34,
+      0x2E, 0x26
+    };
+
+    std::string Key = "lsxqpoxqgsdrcr4n0g";
+   
+    // 第一步解密，后半部分直接解密出明文
+    std::vector<int> Decode_Step1;
+    for (int i = 0; i < 32; i++)
+        Decode_Step1.push_back(EncodeData[i] ^ 0x33 ^ Key[i % 18]);
+
+    // 解密前半部分，遍历符合条件的字节
+    std::vector<int> FrontHalf;
+    for (int i = 0; i < 16; i++)
+    {
+        for (int x = 0; x < 256; x++)
+        {
+            if ((x * 23) % 256 == Decode_Step1[i])
+            {
+                FrontHalf.push_back(x);
+                break;
+            }
+        }
+    }
+    
+    for (auto c : FrontHalf)
+        std::cout << (BYTE)c;
+    
+    for (int i = 16; i < 32; i++)
+        std::cout << (BYTE)Decode_Step1[i];
+    
+    return 0;
+
+}
+```
+
+发现以上代码没办法正常解密，而解密代码和加密代码对应的没问题，考虑是不是密钥出现了问题，一般题目密钥不会是乱七八糟，而可能是一串可读的文本，密钥中只有字母和数字，考虑尝试凯撒解密。
+
+用在线平台进行凯撒解密枚举，得到以下密钥：
+
+```c++
+lsxqpoxqgsdrcr4n0g
+krwponwpfrcqbq4m0f
+jqvonmvoeqbpap4l0e
+ipunmlundpaozo4k0d
+hotmlktmcoznyn4j0c
+gnslkjslbnymxm4i0b
+fmrkjirkamxlwl4h0a
+elqjihqjzlwkvk4g0z
+dkpihgpiykvjuj4f0y
+cjohgfohxjuiti4e0x
+bingfengwithsh4d0w // <-
+ahmfedmfvhsgrg4c0v
+zgledcleugrfqf4b0u
+yfkdcbkdtfqepe4a0t
+xejcbajcsepdod4z0s
+wdibazibrdocnc4y0r
+vchazyhaqcnbmb4x0q
+ubgzyxgzpbmala4w0p
+tafyxwfyoalzkz4v0o
+szexwvexnzkyjy4u0n
+rydwvudwmyjxix4t0m
+qxcvutcvlxiwhw4s0l
+pwbutsbukwhvgv4r0k
+ovatsratjvgufu4q0j
+nuzsrqzsiuftet4p0i
+mtyrqpyrhtesds4o0h
+```
+
+发现箭头处很明显是可读字符串 "bingfengwithsh4d0w"。
+
+所以用这个密钥进行解密，即可解密出Flag。
+
+```c++
+int main()
+{
+    std::vector<unsigned char> EncodeData =
+    {
+      0x24, 0xA5, 0x58, 0x59, 0x0B, 0x45, 0xEC, 0x94, 0x7A, 0xA6,
+      0xCE, 0x11, 0x10, 0x65, 0x8E, 0xA6, 0x6C, 0x31, 0x23, 0x05,
+      0x3E, 0x64, 0x3A, 0x26, 0x6E, 0x26, 0x25, 0x2E, 0x76, 0x34,
+      0x2E, 0x26
+    };
+
+    std::string Key = "bingfengwithsh4d0w";
+   
+    // 第一步解密，后半部分直接解密出明文
+    std::vector<int> Decode_Step1;
+    for (int i = 0; i < 32; i++)
+        Decode_Step1.push_back(EncodeData[i] ^ 0x33 ^ Key[i % 18]);
+
+    // 解密前半部分，遍历符合条件的字节
+    std::vector<int> FrontHalf;
+    for (int i = 0; i < 16; i++)
+    {
+        for (int x = 0; x < 256; x++)
+        {
+            if ((x * 23) % 256 == Decode_Step1[i])
+            {
+                FrontHalf.push_back(x);
+                break;
+            }
+        }
+    }
+    
+    for (auto c : FrontHalf)
+        std::cout << (BYTE)c;
+    
+    for (int i = 16; i < 32; i++)
+        std::cout << (BYTE)Decode_Step1[i];
+    
+    // SYC{Rew@rd_F0r_7our_c0op3rat1on}
+  
+    return 0;
+
+}
+```
+
+### 贝斯_贝斯_
+
+拖入IDA分析代码，得到main函数伪代码
+
+```c++
+int __fastcall main(int argc, const char **argv, const char **envp)
+{
+  FILE *v3; // rax
+  int v4; // eax
+  int v5; // eax
+  int v6; // eax
+  int v7; // eax
+  int v8; // eax
+  int v9; // eax
+  int v10; // eax
+  char v11; // al
+  int v12; // edx
+  char v13; // al
+  int v14; // edx
+  _BYTE v16[32]; // [rsp+20h] [rbp-60h]
+  char Str2[52]; // [rsp+40h] [rbp-40h] BYREF
+  char Str[12]; // [rsp+74h] [rbp-Ch] BYREF
+  char Buffer[32]; // [rsp+80h] [rbp+0h] BYREF
+  char v20[144]; // [rsp+A0h] [rbp+20h] BYREF
+  char *Str1; // [rsp+130h] [rbp+B0h]
+  unsigned int v22; // [rsp+138h] [rbp+B8h]
+  int v23; // [rsp+13Ch] [rbp+BCh]
+  int v24; // [rsp+140h] [rbp+C0h]
+  int v25; // [rsp+144h] [rbp+C4h]
+  const char *v26; // [rsp+148h] [rbp+C8h]
+  _BYTE *v27; // [rsp+150h] [rbp+D0h]
+  int v28; // [rsp+158h] [rbp+D8h]
+  int v29; // [rsp+15Ch] [rbp+DCh]
+  char *v30; // [rsp+160h] [rbp+E0h]
+  void *Block; // [rsp+168h] [rbp+E8h]
+  unsigned int v32; // [rsp+174h] [rbp+F4h]
+  int i; // [rsp+178h] [rbp+F8h]
+  int v34; // [rsp+17Ch] [rbp+FCh]
+
+  sub_4022F0(argc, argv, envp);
+  strcpy(Buffer, "Welcome to the last week");
+  puts(Buffer);
+  printf("please input flag: ");
+  v3 = (FILE *)off_404080();
+  fgets(v20, 24, v3);
+  strcpy(Str, "happy_happy");
+  v32 = strlen(Str);
+  qmemcpy(Str2, "RjB6Myu#,>Bgoq&u.H(nBgdIaOKJbgEYj1GR4S.w", 40);
+  Block = (void *)sub_401723(v20);
+  v30 = Buffer;
+  v29 = strlen(Buffer);
+  v28 = 0;
+  v27 = malloc(2 * v29 + 1);
+  v34 = 0;
+  v26 = "0123456789ABCDEF";
+  // ---------------------标记处开头---------------------
+  while ( v34 < v29 )
+  {
+    v4 = v34++;
+    v25 = (unsigned __int8)v30[v4];
+    if ( v34 >= v29 )
+    {
+      v6 = 0;
+    }
+    else
+    {
+      v5 = v34++;
+      v6 = (unsigned __int8)v30[v5];
+    }
+    v24 = v6;
+    if ( v34 >= v29 )
+    {
+      v8 = 0;
+    }
+    else
+    {
+      v7 = v34++;
+      v8 = (unsigned __int8)v30[v7];
+    }
+    v23 = v8;
+    v22 = v8 | (v25 << 16) | (v24 << 8);
+    v9 = v34++;
+    v27[v9] = off_404010[(v22 >> 18) & 0x3F];
+    v10 = v34++;
+    v27[v10] = off_404010[(v22 >> 12) & 0x3F];
+    if ( v34 > v29 + 1 )
+      v11 = 61;
+    else
+      v11 = off_404010[(v22 >> 6) & 0x3F];
+    v12 = v34++;
+    v27[v12] = v11;
+    if ( v34 > v29 )
+      v13 = 61;
+    else
+      v13 = off_404010[v22 & 0x3F];
+    v14 = v34++;
+    v27[v14] = v13;
+  }
+  for ( i = 0; i <= 23; ++i )
+  {
+    v16[i] = v30[i];
+    if ( v30[i] == 99 )
+      v16[i] ^= v30[i + 1];
+  }
+  // ---------------------标记处结尾---------------------
+  Str1 = (char *)sub_401C6A(Block, Str, v32);
+  if ( !strcmp(Str1, Str2) )
+    puts("it's correct!");
+  else
+    puts("maybe wrong!");
+  free(Block);
+  free(Str1);
+  return 0;
+}
+```
+
+可以通过上下文分析出标记段的代码部分是没有用到的，可以直接忽略，所以主要分析的函数就是sub_401723和sub_401C6A
+
+sub_401723:
+
+```c++
+_BYTE *__fastcall sub_401723(const char *a1)
+{
+  int v1; // ecx
+  int v2; // eax
+  _BYTE v4[72]; // [rsp+20h] [rbp-60h] BYREF
+  _BYTE *v5; // [rsp+68h] [rbp-18h]
+  void *Block; // [rsp+70h] [rbp-10h]
+  int v7; // [rsp+7Ch] [rbp-4h]
+  int v8; // [rsp+80h] [rbp+0h]
+  int v9; // [rsp+84h] [rbp+4h]
+  int v10; // [rsp+88h] [rbp+8h]
+  int i; // [rsp+8Ch] [rbp+Ch]
+
+  v7 = 138 * strlen(a1) / 0x64 + 1;
+  Block = malloc(v7);
+  v5 = malloc(v7);
+  v10 = 0;
+  sub_401550(v4);
+  memset(Block, 0, v7);
+  while ( v10 < strlen(a1) )
+  {
+    v9 = a1[v10];
+    for ( i = v7 - 1; ; --i )
+    {
+      v9 += *((char *)Block + i) << 8;
+      *((_BYTE *)Block + i) = (char)v9 % 58;
+      v9 /= 58;
+      if ( !v9 )
+        break;
+    }
+    ++v10;
+  }
+  for ( i = 0; !*((_BYTE *)Block + i) && i < v7; ++i )
+    ;
+  v8 = 0;
+  while ( i < v7 )
+  {
+    v1 = *((char *)Block + i);
+    v2 = v8++;
+    v5[v2] = v4[v1];
+    ++i;
+  }
+  v5[v8] = 0;
+  free(Block);
+  return v5;
+}
+```
+
+这部分代码似乎是一个自定义映射表的base58编码，用sub_401550拿到一个映射表，通过映射表将输入的字符串进行编码操作。
+
+sub_401550:
+
+```c++
+__int64 __fastcall sub_401550(__int64 a1)
+{
+  __int64 result; // rax
+  tm Tm; // [rsp+20h] [rbp-60h] BYREF
+  time_t Time; // [rsp+48h] [rbp-38h] BYREF
+  _DWORD v4[60]; // [rsp+50h] [rbp-30h] BYREF
+  char Str[68]; // [rsp+140h] [rbp+C0h] BYREF
+  int v6; // [rsp+184h] [rbp+104h]
+  unsigned int Seed[2]; // [rsp+188h] [rbp+108h]
+  struct tm *v8; // [rsp+190h] [rbp+110h]
+  int v9; // [rsp+198h] [rbp+118h]
+  int i; // [rsp+19Ch] [rbp+11Ch]
+
+  strcpy(Str, "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
+  v9 = strlen(Str);
+  memset(v4, 0, 0xE8uLL);
+  Time = time64(0LL);
+  v8 = localtime(&Time);
+  memset(&Tm, 0, sizeof(Tm));
+  Tm.tm_year = v8->tm_year;
+  Tm.tm_mon = v8->tm_mon;
+  Tm.tm_mday = v8->tm_mday;
+  *(_QWORD *)Seed = mktime(&Tm);
+  srand(Seed[0]);
+  for ( i = 0; i <= 57; ++i )
+  {
+    do
+      v6 = rand() % v9;
+    while ( v4[v6] );
+    *(_BYTE *)(i + a1) = Str[v6];
+    v4[v6] = 1;
+  }
+  result = a1 + 58;
+  *(_BYTE *)(a1 + 58) = 0;
+  return result;
+}
+```
+
+sub_401550初始化映射表是取出当前时间戳，然后用Seed[0]当作种子通过rand处理原始映射表，拿到一个随机的映射表，这里涉及到随机种子的问题，由于只传入了year、mon、day，年月日三个数据，所以种子只和年月日有关，这个映射表的年月日数据之后解密可以通过遍历来找到对应的年月日。
+
+所以sub_401723解密只需要拿到自定义的映射表进行Base58解密即可。
+
+sub_401C6A传入了Base58编码后的明文、Str、Str长度，Str "happy_happy" 大概率是作为一个密钥参与计算。
+
+sub_401C6A：
+
+```c++
+_BYTE *__fastcall sub_401C6A(const char *a1, __int64 a2, unsigned int a3)
+{
+  int v3; // eax
+  int v4; // eax
+  _BYTE v6[88]; // [rsp+20h] [rbp-80h] BYREF
+  _BYTE *v7; // [rsp+78h] [rbp-28h]
+  int v8; // [rsp+84h] [rbp-1Ch]
+  int v9; // [rsp+88h] [rbp-18h]
+  int j; // [rsp+8Ch] [rbp-14h]
+  int i; // [rsp+90h] [rbp-10h]
+  int v12; // [rsp+94h] [rbp-Ch]
+  int v13; // [rsp+98h] [rbp-8h]
+  unsigned int v14; // [rsp+9Ch] [rbp-4h]
+
+  v9 = strlen(a1);
+  if ( (v9 & 3) != 0 )
+    v3 = v9 + 4 - v9 % 4;
+  else
+    v3 = v9;
+  v8 = v3;
+  v7 = malloc(5 * (v3 / 4) + 1);
+  v13 = 0;
+  v12 = 0;
+  sub_401AF6(v6, a2, a3);
+  while ( v13 < v9 )
+  {
+    v14 = 0;
+    for ( i = 0; i <= 3; ++i )
+    {
+      v14 <<= 8;
+      if ( v13 < v9 )
+      {
+        v4 = v13++;
+        v14 |= (unsigned __int8)a1[v4];
+      }
+    }
+    for ( j = 4; j >= 0; --j )
+    {
+      v7[v12 + j] = v6[v14 % 0x55];
+      v14 /= 0x55u;
+    }
+    v12 += 5;
+  }
+  v7[v12] = 0;
+  return v7;
+}
+```
+
+这个函数是进行了Base85编码，通过传入密钥调用sub_401AF6初始化映射表，由于没有特殊数据调用，直接将sub_401AF6伪代码以及里面调用的函数的伪代码全都复制到c++项目，传入密钥即可得到映射表。
+
+解密总流程：
+
+1. 通过密钥拿到映射表1，用映射表1对密文进行Base85解密
+
+2. 通过年月日拿到时间戳进行初始化映射表2，用映射表2对Base85解密完的数据进行Base58解密。
+
+完整解密代码如下：
+
+```c++
+char aAbcdefghijklmn[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+,-./:;<=>?@[]^_`{|}~";
+
+BYTE random_Chars[72]{};
+
+BYTE KeyList[88]{};
+
+unsigned __int64 __fastcall sub_4018FF(__int64 a1, __int64 a2, int a3)
+{
+    unsigned __int64 result; // rax
+    unsigned __int8 v4; // [rsp+7h] [rbp-9h]
+    int v5; // [rsp+8h] [rbp-8h]
+    int i; // [rsp+Ch] [rbp-4h]
+    int j; // [rsp+Ch] [rbp-4h]
+
+    v5 = 0;
+    for (i = 0; i <= 255; ++i)
+    {
+        result = a1 + i;
+        *(BYTE*)result = i;
+    }
+    for (j = 0; j <= 255; ++j)
+    {
+        v5 = (*(unsigned __int8*)(a1 + j) + v5 + *(unsigned __int8*)(a2 + j % a3)) % 256;
+        v4 = *(BYTE*)(a1 + j);
+        *(BYTE*)(a1 + j) = *(BYTE*)(a1 + v5);
+        result = v4;
+        *(BYTE*)(v5 + a1) = v4;
+    }
+    return result;
+}
+
+__int64 __fastcall sub_4019EE(__int64 a1, __int64 a2, int a3)
+{
+    __int64 result; // rax
+    char v4; // [rsp+3h] [rbp-Dh]
+    unsigned int i; // [rsp+4h] [rbp-Ch]
+    int v6; // [rsp+8h] [rbp-8h]
+    int v7; // [rsp+Ch] [rbp-4h]
+
+    v7 = 0;
+    v6 = 0;
+    for (i = 0; ; ++i)
+    {
+        result = i;
+        if ((int)i >= a3)
+            break;
+        v7 = (v7 + 1) % 256;
+        v6 = (*(unsigned __int8*)(a1 + v7) + v6) % 256;
+        v4 = *(BYTE*)(a1 + v7);
+        *(BYTE*)(a1 + v7) = *(BYTE*)(a1 + v6);
+        *(BYTE*)(v6 + a1) = v4;
+        *(BYTE*)(a2 + (int)i) = *(BYTE*)(a1 + (unsigned __int8)(*(BYTE*)(a1 + v7) + *(BYTE*)(a1 + v6)));
+    }
+    return result;
+}
+
+__int64 __fastcall sub_401AF6(__int64 a1, __int64 a2, unsigned int a3)
+{
+    unsigned int v3; // ecx
+    __int64 result; // rax
+    DWORD v5[88]; // [rsp+20h] [rbp-60h] BYREF
+    BYTE v6[96]; // [rsp+180h] [rbp+100h] BYREF
+    BYTE v7[264]; // [rsp+1E0h] [rbp+160h] BYREF
+    unsigned int j; // [rsp+2E8h] [rbp+268h]
+    int i; // [rsp+2ECh] [rbp+26Ch]
+
+    sub_4018FF((long long)v7, a2, a3);
+    sub_4019EE((long long)v7, (long long)v6, 85LL);
+    memset(v5, 0, 340);
+    for (i = 0; i <= 84; ++i)
+    {
+        for (j = v6[i] % 0x55u; v5[j]; j = v3 - 85 * j)
+        {
+            v3 = j + 1;
+            j = (int)(j + 1) / 85;
+        }
+        *(BYTE*)(i + a1) = aAbcdefghijklmn[j];
+        v5[j] = 1;
+    }
+    result = a1 + 85;
+    *(BYTE*)(a1 + 85) = 0;
+    return result;
+}
+
+void Base85Decode(const char* Encoded, char* Output, int OriginalLength) 
+{
+    int ReverseMapping[256];
+
+    for (int idx = 0; idx < 88; ++idx) 
+    {
+        ReverseMapping[KeyList[idx]] = idx;
+    }
+
+    int EncodedLength = strlen(Encoded);
+    int OutputIndex = 0;
+
+    for (int EncodedIndex = 0; EncodedIndex < EncodedLength; EncodedIndex += 5) 
+    {
+        unsigned int v14 = 0;
+
+        for (int j = 0; j < 5; ++j) 
+        {
+            v14 = v14 * 85 + ReverseMapping[(unsigned char)Encoded[EncodedIndex + j]];
+        }
+
+        for (int i = 3; i >= 0; --i) 
+        {
+            if (OutputIndex < OriginalLength)
+            { 
+                Output[OutputIndex + i] = (v14 & 0xFF);
+                v14 >>= 8;
+            }
+        }
+
+        OutputIndex += 4;
+    }
+
+    Output[OriginalLength] = '\0';
+}
+
+__int64 __fastcall sub_401550(__int64 a1, int month, int day)
+{
+    __int64 result; // rax
+    tm Tm; // [rsp+20h] [rbp-60h] BYREF
+    time_t Time; // [rsp+48h] [rbp-38h] BYREF
+    DWORD v4[60]; // [rsp+50h] [rbp-30h] BYREF
+    char Str[68]; // [rsp+140h] [rbp+C0h] BYREF
+    int v6; // [rsp+184h] [rbp+104h]
+    unsigned int Seed[2]; // [rsp+188h] [rbp+108h]
+    struct tm* v8; // [rsp+190h] [rbp+110h]
+    int v9; // [rsp+198h] [rbp+118h]
+    int i; // [rsp+19Ch] [rbp+11Ch]
+
+    strcpy(Str, "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
+    v9 = strlen(Str);
+    memset(v4, 0, 0xE8uLL);
+    Time = _time64(0LL);
+    v8 = localtime(&Time);
+    memset(&Tm, 0, sizeof(Tm));
+    Tm.tm_year = v8->tm_year;
+    Tm.tm_mon = month-1;
+    Tm.tm_mday = day;
+    *(DWORD64*)Seed = mktime(&Tm);
+    srand(Seed[0]);
+    for (i = 0; i <= 57; ++i)
+    {
+        do
+            v6 = rand() % v9;
+        while (v4[v6]);
+        *(BYTE*)(i + a1) = Str[v6];
+        v4[v6] = 1;
+    }
+    result = a1 + 58;
+    *(BYTE*)(a1 + 58) = 0;
+    return result;
+}
+
+std::string Base58Decode(const unsigned char* Block, int blockSize)
+{
+    std::string result;
+    std::vector<unsigned char> temp(blockSize);
+
+    for (int i = 0; i < blockSize; i++) 
+    {
+        temp[i] = Block[i];
+    }
+
+    while (true) 
+    {
+        bool allZero = true;
+        unsigned int remainder = 0;
+
+        for (int i = 0; i < blockSize; i++)
+        {
+            unsigned int current = remainder * 58 + temp[i];
+            temp[i] = current / 256;
+            remainder = current % 256;
+
+            if (temp[i] != 0) 
+                allZero = false;
+        }
+
+        result = (char)remainder + result;
+
+        if (allZero) 
+            break;
+    }
+
+    return result;
+}
+
+int main()
+{
+    char LastEncodedData[] = "RjB6Myu#,>Bgoq&u.H(nBgdIaOKJbgEYj1GR4S.w";
+
+    // 获取映射表1
+    char Key[] = "happy_happy";
+    sub_401AF6((long long)KeyList, (long long)Key, strlen(Key));
+
+    // Base85解密
+    char DecodeData[33]{};
+    Base85Decode(LastEncodedData, DecodeData, 33);
+
+    // 遍历月、日，默认年是2024
+    for (int month = 1; month <= 12; month++)
+    {
+        for (int day = 1; day <= 31; day++)
+        {
+            // 通过月、日数据初始化时间戳获取随机字符映射表
+            sub_401550((long long)random_Chars, month, day);
+
+            char Block_Temp[33]{};
+
+            // 通过映射表反向映射拿到原始数据
+            for (int i = 0; i < 32; i++)
+            {
+                for (int j = 0; j < 58; j++)
+                {
+                    if (random_Chars[j] == DecodeData[i])
+                        Block_Temp[i] = j;
+                }
+            }
+
+            // Base58解密
+            auto Flag = Base58Decode((const unsigned char*)Block_Temp, 32);
+		   // 寻找关键Flag字符串
+            if (Flag.find("SYC{") != std::string::npos)
+                std::cout << Flag << std::endl;
+        }
+    }
+
+    // SYC{th1s_ls_an_ez_base}
+
+	return 0;
+}
+```
+
+### baby_vm
+
+萌新也是第一次做vm题，弯弯绕绕才勉强做出来。
+
+拖入IDA拿到以下伪代码。
+
+```c++
+int __fastcall main(int argc, const char **argv, const char **envp)
+{
+  sub_7FF678E719DE();
+  Block = malloc(0x10uLL);
+  memset(Block, 0, 0x10uLL);
+  sub_7FF678E713B4((__int64)&unk_7FF678E77040, (char *)Block);
+  free(Block);
+  return 0;
+}
+
+__int64 __fastcall sub_7FF678E713B4(__int64 a1, char *Registers)
+{
+  unsigned __int8 v2; // r8
+  int v3; // eax
+  int v4; // edx
+  FILE *STDIN; // rax
+  int v7; // [rsp+2Ch] [rbp-4h]
+
+  while ( 2 )
+  {
+    v7 = *(_DWORD *)(4LL * *((int *)Registers + 2) + a1);
+    if ( v7 <= 70 )
+    {
+      if ( v7 >= 51 )
+      {
+        switch ( v7 )
+        {
+          case '3':
+            *Registers += Registers[3];
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case '4':
+            *Registers -= Registers[3];
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case '5':
+            *Registers *= Registers[3];
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case '6':
+            *Registers = (unsigned __int8)*Registers / (unsigned __int8)Registers[3];
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case '7':
+            *Registers = ~(*Registers & Registers[3]) & ~(~Registers[3] & ~*Registers);
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case '8':
+            v2 = *Registers;
+            v3 = *((_DWORD *)Registers + 3);
+            *((_DWORD *)Registers + 3) = v3 + 1;
+            dword_7FF678E7B0A0[v3] = v2;
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case '9':
+            *Registers = dword_7FF678E7B0A0[--*((_DWORD *)Registers + 3)];
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case ':':
+            *Registers = Str[(unsigned __int8)Registers[1]];
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case ';':
+            *Registers = Registers[3];
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case '<':
+            Registers[1] = *Registers;
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case '=':
+            Registers[2] = *Registers;
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case '>':
+            Registers[3] = *Registers;
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case '?':
+            *Registers = *(_DWORD *)(4 * (*((int *)Registers + 2) + 1LL) + a1);
+            *((_DWORD *)Registers + 2) += 2;
+            continue;
+          case '@':
+            *Registers = Registers[1];
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case 'A':
+            *Registers = EncodeData[(unsigned __int8)Registers[1]];
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case 'B':
+            ++*Registers;
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case 'C':
+            if ( --Registers[2] )
+              v4 = *((_DWORD *)Registers + 2) - *(_DWORD *)(4 * (*((int *)Registers + 2) + 1LL) + a1);
+            else
+              v4 = *((_DWORD *)Registers + 2) + 2;
+            *((_DWORD *)Registers + 2) = v4;
+            continue;
+          case 'D':
+            if ( *Registers != Registers[3] )
+              Registers[4] = 1;
+            --Registers[1];
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          case 'E':
+            *Registers = *(_DWORD *)(4 * (*((int *)Registers + 2) + 1LL) + a1);
+            *((_DWORD *)Registers + 2) += 2;
+            continue;
+          case 'F':
+            STDIN = (FILE *)off_7FF678E77290();
+            fgets(Str, 51, STDIN);
+            Str[strcspn(Str, "\n")] = 0;
+            ++*((_DWORD *)Registers + 2);
+            continue;
+          default:
+            return sub_7FF678E71360("Unknown opcode: %d\n", v7);
+        }
+      }
+      return sub_7FF678E71360("Unknown opcode: %d\n", v7);
+    }
+    break;
+  }
+  if ( v7 != 255 )
+    return sub_7FF678E71360("Unknown opcode: %d\n", v7);
+  if ( Registers[4] )
+    return sub_7FF678E71360("something wrong");
+  else
+    return sub_7FF678E71360("Good!!!");
+}
+```
+
+传入的Block空间相当于寄存器空间，a1则是要执行的opcode数组。
+
+寄存器Register[2]相当于当前代码执行位置。Register[4]就是条件数值。
+
+逐opcode分析如下：
+
+```
+---------数据计算---------
+'3'
+R[0] += R[3]
+
+'4' 
+R[0] -= R[3]
+
+'5' 
+R[0] *= R[3]
+
+'6' 
+R[0] /= R[3]
+
+'7' 
+R[0] ^= R[3]
+
+---------数据存取---------
+'8' 
+将当前操作数储存到数组里面，
+dword_7FF678E7B0A0[R[3]++] = R[0]
+
+'9'
+从数组中取出数据到当前操作数
+R[0] = dword_7FF678E7B0A0[R[3]--]
+
+':'
+从输入的Str中取出指定下标字符数值
+R[0] = Str[R[1]]
+
+---------寄存器数据转移---------
+';'
+R[0] = R[3]
+
+'<'
+R[1] = R[0]
+
+'='
+R[2] = R[0]
+
+'>'
+R[3] = R[0]
+
+'@'
+R[0] = R[1]
+
+'?'
+取出下一个命令
+R[0] = OpCodes[4 * (R[2] + 1)]
+
+'A'
+取出加密后的数据
+R[0] = EncodeData[Register[1]]
+
+'B'
+R[0]++
+
+'C'
+取出操作数，代码跳回指定偏移，如果为第一个命令，则不执行，继续往下
+if(--R[2])
+   R[2] = R[2] - OpCodes[4 * (R[2] + 1)]
+else
+   R[2] = R[2] + 2
+
+'D'
+判断两个数值是否相等，用R[4]储存判断结果
+if(R[0] != R[3])
+   R[4] = 1
+--R[1]
+
+'E'
+同命令'?'，取出下一个命令
+
+'F'
+要求用户输入字符串，储存到Str数组
+
+```
+
+从函数结尾的Register[4]判断，可以知道要求Register[4]最后必须是0，也就是输入字符串经过加密后要与密文相等。
+
+通过opcode解释，可以将unk_7FF678E77040里面储存的代码和操作数进行翻译。
+
+翻译伪代码如下：
+
+```c++
+unsigned char EncodeData[]{
+ 0x0E, 0x40, 0x7E, 0x1E, 0x13, 0x34, 0x1A, 0x17, 0x6E, 0x1B,
+ 0x1C, 0x17, 0x2E, 0x0C, 0x1A, 0x30, 0x69, 0x32, 0x26, 0x16,
+ 0x1A, 0x15, 0x25, 0x0E, 0x1C, 0x42, 0x30, 0x32, 0x0B, 0x42,
+ 0x79, 0x17, 0x6E, 0x42, 0x29, 0x17, 0x6E, 0x5A, 0x2D, 0x20,
+ 0x1A, 0x16, 0x26, 0x10, 0x05, 0x15, 0x6E, 0x0D, 0x58, 0x24 };
+
+char Str[52]{};
+fgets(Str, 51, STDIN);
+Str[strcspn(Str, '\n')] = 0;
+
+char EncodeStr[504]{};
+
+int Register_4 = 0;
+
+for(int i = 0; i < 50; i++)
+{
+    if(i % 2 == 0)
+    {
+    	// 偶数下标字符加密
+        int Temp = Str[i];
+        Temp -= 0x53;
+        Temp += 0x59;
+        Temp ^= 0x43;
+        EncodeStr[i] = Temp;
+    }
+    else
+    {
+     	// 奇数下标字符加密
+        int Temp = Str[i];
+        Temp -= 0x79;
+        Temp += 0x73;
+        Temp ^= 0x63;
+        EncodeStr[i] = Temp;
+    }
+    
+    if(EncodeData[i] != EncodeStr[i])
+        Register_4 = 1;
+}
+```
+
+所以解密起来很简单，就是分奇偶下标将EncodeData进行解密计算即可拿到Flag.
+
+解密代码如下:
+
+```c++
+int main()
+{
+	unsigned char EncodeData[]{
+	 0x0E, 0x40, 0x7E, 0x1E, 0x13, 0x34, 0x1A, 0x17, 0x6E, 0x1B,
+	 0x1C, 0x17, 0x2E, 0x0C, 0x1A, 0x30, 0x69, 0x32, 0x26, 0x16,
+	 0x1A, 0x15, 0x25, 0x0E, 0x1C, 0x42, 0x30, 0x32, 0x0B, 0x42,
+	 0x79, 0x17, 0x6E, 0x42, 0x29, 0x17, 0x6E, 0x5A, 0x2D, 0x20,
+	 0x1A, 0x16, 0x26, 0x10, 0x05, 0x15, 0x6E, 0x0D, 0x58, 0x24 };
+
+	std::string Flag;
+
+	for (int i = 0; i < 50; i++)
+	{
+		if (i % 2 == 0)
+		{
+			int Temp = EncodeData[i];
+			Temp ^= 0x43;
+			Temp = Temp + 0x59 - 0x53;
+			Flag += (char)Temp;
+		}
+		else
+		{
+			int Temp = EncodeData[i];
+			Temp = Temp + 0x73 - 0x79;
+			Temp ^= 0x63;
+			Flag += (char)Temp;
+		}
+	}
+
+	std::cout << Flag << std::endl;
+	
+	// SYC{VM_r3verse_I0Oks_llke_yON_@r3_pr37ty_skiLl3d!}
+
+	return 0;
+}
+```
